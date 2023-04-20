@@ -514,6 +514,33 @@ program
   });
 
 program
+  .command("deploy-dev")
+  .description(
+    `
+  This deploys this project to the local .magento folder. This is like a one
+  time npm run dev operation with no watcher. More importantly, this alows this
+  module to be installed into any custom .magento folder installation location,
+  such as, another module project being developed locally.
+
+  Specify the target .magento installation folder via the environment variable:
+  MAGENTO_INSTALL_FOLDER
+
+  NOTE: This command assumes the folder specified is a legitimate magento
+  installation location created via the magento-install command. It will attempt
+  to sync regardless of folder structure of the provided directory so long as
+  the directory exists.
+`
+  )
+  .action((src, dest) => {
+    try {
+      require("./lib/magento/sync-plugin");
+    } catch (err) {
+      console.warn("deploy-dev process exited unexpectedly");
+      console.warn(err.stack || err.message);
+    }
+  });
+
+program
   .command("magento-install")
   .description(
     `

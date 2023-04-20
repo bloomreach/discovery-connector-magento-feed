@@ -3,7 +3,48 @@
 The Feed module provides a means to submit your magento data to the
 Bloomreach service.
 
-## Installing Magento
+- THE INTENT of this module is to provide a base example of how to upload
+  magento's product catalog to bloomreach. It is VERY abundant that everyone has
+  a unique approach to magento and very different needs, so this module is
+  useful, but should be viewed as a guideline rather than a full solution to
+  YOUR specific product.
+
+- YOU CAN use this module directly in a default magento project. If you have any
+  custom configuration or overrides of default magento behavior then:
+
+- YOU SHOULD fork this project and modify it as needed for your specific use
+  case. The most interesting class for you to modify / override would be
+  `ProductToBRTransformer` where you can adjust your product conversions. You
+  can look at `SubmitProductsApiController` to see the API endpoint and make
+  adjustments to the batch processing this module uses.
+
+Items of interest:
+
+Note that this module does it's best to assume you have a MASSIVE product
+catalog and does it's best to batch process and write to the local disk of the
+server to offload eating up all of the server's RAM. Writing to the disk can
+pose their own set of issues as well depending on your cloud service you are
+using, so this is an area you may need to customize as well to make the module
+run smoothely for your environment.
+
+Currently, this module does NOT delete the file generated to be fed to
+Bloomreach, located in the `var` directory of the project. This is for debugging
+and this behavior should be customized, again, as your project needs.
+
+## Base requirements for your project
+
+This module utilizes the Magento Async API pattern, so you MUST have the proper
+consumer running along with the proper cron configuration:
+
+```sh
+bin/magento queue:consumers:start async.operations.all
+bin/magento cron:run --group="async_operations"
+```
+
+You must ensure async perations ARE working properly and that operations are
+getting dequeued and processed.
+
+## Installing Magento for development
 
 - Ensure you have installed Docker and it is up to date
 - Go to https://marketplace.magento.com and create an account or log into that

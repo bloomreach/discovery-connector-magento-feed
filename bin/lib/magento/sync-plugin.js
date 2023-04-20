@@ -16,8 +16,10 @@ const fs = require("fs-extra");
 
 // Ensure reliable project root path.
 const projectRoot = path.resolve(__dirname, "../../../");
+const MAGENTO_INSTALL_FOLDER =
+  process.env.MAGENTO_INSTALL_FOLDER || path.resolve(projectRoot, ".magento");
 
-if (!fs.existsSync(path.resolve(projectRoot, ".magento"))) {
+if (!fs.existsSync(MAGENTO_INSTALL_FOLDER)) {
   console.error(
     ".magento directory not found. Please run `npm run magento-install` to install magento for this project."
   );
@@ -27,17 +29,17 @@ if (!fs.existsSync(path.resolve(projectRoot, ".magento"))) {
 // Ensure the plugin directory exists.
 if (
   !fs.existsSync(
-    path.resolve(projectRoot, ".magento/src/app/code/Bloomreach/Feed")
+    path.resolve(MAGENTO_INSTALL_FOLDER, "src/app/code/Bloomreach/Feed")
   )
 ) {
   fs.ensureDirSync(
-    path.resolve(projectRoot, ".magento/src/app/code/Bloomreach/Feed")
+    path.resolve(MAGENTO_INSTALL_FOLDER, "src/app/code/Bloomreach/Feed")
   );
 }
 
 // Ensure all files all cleaned so they sync correctly and won't leave behind
 // fragments
-rmrf.sync(path.resolve(projectRoot, ".magento/src/app/code/Bloomreach/Feed"));
+rmrf.sync(path.resolve(MAGENTO_INSTALL_FOLDER, "src/app/code/Bloomreach/Feed"));
 
 // Build the command
 const rsync = new Rsync()
@@ -45,7 +47,7 @@ const rsync = new Rsync()
   .flags("az")
   .source(projectRoot + "/")
   .destination(
-    path.resolve(projectRoot, ".magento/src/app/code/Bloomreach/Feed")
+    path.resolve(MAGENTO_INSTALL_FOLDER, "src/app/code/Bloomreach/Feed")
   );
 
 rsync.exclude([
