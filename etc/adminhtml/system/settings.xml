@@ -1,0 +1,54 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Bloomreach Connector extension
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Bloomreach Proprietary License
+ * that is bundled with this package in the file LICENSE.txt.
+ *
+ * @category       Bloomreach
+ * @package        Connector
+ * @copyright      Copyright (c) 2021-current Bloomreach Inc.
+ */
+-->
+<include xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_include.xsd">
+    <group id="extension" translate="label,comment" type="text" sortOrder="5" showInDefault="1" showInWebsite="1"  showInStore="1">
+        <label>Module Details</label>
+        <field id="module_version" translate="label" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+            <label>Module Version</label>
+            <frontend_model>Bloomreach\Feed\Model\Config\Source\ModuleVersion</frontend_model>
+            <backend_model>Magento\Config\Model\Config\Backend\Serialized\ArraySerialized</backend_model>
+        </field>
+    </group>
+    <group id="general" translate="label,comment" type="text" sortOrder="10" showInDefault="1" showInWebsite="1"  showInStore="1">
+        <label>Credentials</label>
+        <comment>Add your Api credentials to authenticate Magento with your Bloomreach Account.</comment>
+        <field id="accountid" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+            <label>Account Id</label>
+        </field>
+        <field id="catalog_key" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1">
+            <label>Catalog Name</label>
+        </field>
+        <field id="auth_key" translate="label" type="password" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="1">
+            <label>API Key</label>
+            <comment>This key is sent to you in an email when you create your Bloomreach account. This is NOT the auth key that is found in your developer profile</comment>
+        </field>
+    </group>
+    <group id="api_url" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1"  showInStore="1">
+        <label>Submit Data to Bloomreach</label>
+        <field id="catalog_environment" translate="label" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+            <comment>This specifies which environment you wish to upload your data to Bloomreach</comment>
+            <label>Target Environment</label>
+            <source_model>Bloomreach\Feed\Model\Config\Source\EndPoint</source_model>
+        </field>
+        <field id="submit_products" translate="label" type="button" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+            <label>Submit Product Catalog</label>
+            <frontend_model>Bloomreach\Feed\Block\Adminhtml\System\Config\SubmitProductsButton</frontend_model>
+            <frontend_class>submit-catalog-button</frontend_class>
+            <comment>WARNING: This will trigger the submission of your entire product catalog to Bloomreach. This can be a long running process and may take a long time to complete.</comment>
+        </field>
+    </group>
+</include>

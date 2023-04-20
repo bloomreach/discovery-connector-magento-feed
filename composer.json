@@ -1,0 +1,26 @@
+{
+  "name": "bloomreach/bloomreach-feed-magento",
+  "description": "Bloomreach connector for submitting magento data to Bloomreach.",
+  "version": "1.0.0",
+  "type": "magento2-module",
+  "license": "proprietary",
+  "authors": [
+    {
+      "name": "Bloomreach Inc.",
+      "email": "support@bloomreach.com"
+    }
+  ],
+  "require": {
+    "php": "~7.2.0||~7.3.0||~7.4.0||~8.0.0||~8.1.0"
+  },
+  "autoload": {
+    "files": [
+      "registration.php"
+    ],
+    "psr-4": {
+      "Bloomreach\\Feed\\": ""
+    }
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true
+}

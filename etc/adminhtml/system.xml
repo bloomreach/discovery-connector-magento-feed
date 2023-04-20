@@ -1,0 +1,28 @@
+<?xml version="1.0" ?>
+<!--
+/**
+ * Bloomreach Connector extension
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Bloomreach Proprietary License
+ * that is bundled with this package in the file LICENSE.txt.
+ *
+ * @category       Bloomreach
+ * @package        Connector
+ * @copyright      Copyright (c) 2021-current Bloomreach Inc.
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
+    <system>
+        <tab id="bloomreach_feed_tab" translate="label" sortOrder="10">
+            <label>Bloomreach Feed</label>
+        </tab>
+        <section id="br_feed_section" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+            <label>Settings</label>
+            <tab>bloomreach_feed_tab</tab>
+            <resource>Bloomreach_Feed::config_settings</resource>
+            <include path="Bloomreach_Feed::system/settings.xml"/>
+        </section>
+    </system>
+</config>
