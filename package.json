@@ -1,6 +1,6 @@
 {
   "name": "bloomreach-feed-magento",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "NPM tools to aid in developing this connector application",
   "main": "index.js",
   "repository": {
@@ -8,9 +8,9 @@
     "url": "git@code-ssh.bloomreach.com:engineering/sm/magento-discovery-feed.git"
   },
   "scripts": {
-    "deploy-qa": "ts-node --transpile-only bin/main deploy-qa \"./.magento/src/app/code/Bloomreach/Feed/\" \"/home/magento/server\"",
-    "deploy-dev": "ts-node --transpile-only bin/main deploy-dev",
-    "dev": "ts-node --transpile-only bin/main dev",
+    "deploy-qa": "ts-node --transpile-only bin/main deploy-qa \"/home/magento/server\" Bloomreach/Feed",
+    "deploy-dev": "ts-node --transpile-only bin/main deploy-dev Bloomreach/Feed",
+    "dev": "ts-node --transpile-only bin/main dev Bloomreach/Feed",
     "magento-install": "ts-node --transpile-only bin/main magento-install",
     "magento-post-install": "ts-node --transpile-only bin/main magento-post-install",
     "magento-uninstall": "ts-node --transpile-only bin/main magento-uninstall",

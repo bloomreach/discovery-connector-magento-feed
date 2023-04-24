@@ -76,15 +76,15 @@ program
   });
 
 program
-  .command("dev")
+  .command("dev [module]")
   .description(
     `
   Starts up a developer environment that performs incremental builds while
   developing within this project.
 `
   )
-  .action(() => {
-    require("./commands/dev")(getOptions()).catch((err) => {
+  .action((module) => {
+    require("./commands/dev")({ module }, getOptions()).catch((err) => {
       console.warn("dev process exited unexpectedly");
       if (program.verbose) console.warn(err.stack || err.message);
     });
@@ -498,7 +498,7 @@ program
   });
 
 program
-  .command("deploy-qa [src] [dest]")
+  .command("deploy-qa [dest] [module]")
   .description(
     `
   This deploys the extension as is applied to YOUR CURRENT LOCAL dev server. The
@@ -506,15 +506,16 @@ program
   /home/magento/server/) where the .magento folder is located.
 `
   )
-  .action((src, dest) => {
-    require("./commands/deploy-qa")({ src, dest }).catch((err) => {
+  .action((dest, module) => {
+    process.env.MAGENTO_MODULE = module;
+    require("./commands/deploy-qa")({ dest }).catch((err) => {
       console.warn("deploy-qa process exited unexpectedly");
       console.warn(err.stack || err.message);
     });
   });
 
 program
-  .command("deploy-dev")
+  .command("deploy-dev [module]")
   .description(
     `
   This deploys this project to the local .magento folder. This is like a one
@@ -531,9 +532,10 @@ program
   the directory exists.
 `
   )
-  .action((src, dest) => {
+  .action((module) => {
     try {
-      require("./lib/magento/sync-plugin");
+      process.env.MAGENTO_MODULE = module;
+      require("./lib/magento/sync-plugin")();
     } catch (err) {
       console.warn("deploy-dev process exited unexpectedly");
       console.warn(err.stack || err.message);
