@@ -32,23 +32,38 @@ xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_incl
         <field id="catalog_key" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1">
             <label>Catalog Name</label>
         </field>
-        <field id="auth_key" translate="label" type="password" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="1">
+        <field id="api_key" translate="label" type="password" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="1">
             <label>API Key</label>
             <comment>This key is sent to you in an email when you create your Bloomreach account. This is NOT the auth key that is found in your developer profile</comment>
         </field>
     </group>
     <group id="api_url" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1"  showInStore="1">
-        <label>Submit Data to Bloomreach</label>
+        <label>Target Environment</label>
         <field id="catalog_environment" translate="label" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
             <comment>This specifies which environment you wish to upload your data to Bloomreach</comment>
             <label>Target Environment</label>
             <source_model>Bloomreach\Feed\Model\Config\Source\EndPoint</source_model>
         </field>
-        <field id="submit_products" translate="label" type="button" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
-            <label>Submit Product Catalog</label>
-            <frontend_model>Bloomreach\Feed\Block\Adminhtml\System\Config\SubmitProductsButton</frontend_model>
-            <frontend_class>submit-catalog-button</frontend_class>
-            <comment>WARNING: This will trigger the submission of your entire product catalog to Bloomreach. This can be a long running process and may take a long time to complete.</comment>
+    </group>
+    <group id="attribute_configs" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1"  showInStore="1">
+        <label>Attribute Transformations</label>
+        <field id="name_mappings" translate="label" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+            <label>Name Mappings</label>
+            <frontend_model>Bloomreach\Feed\Block\Adminhtml\System\Config\AttrNameMappings</frontend_model>
+            <backend_model>Bloomreach\Feed\Model\Config\Backend\AttrNameMappings</backend_model>
+            <comment>Name mappings for attribute names. Target attributes can be comma-separated to map the same property to multiple attributes.</comment>
+        </field>
+        <field id="index_value_attributes" translate="label" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+            <label>Index-value Attributes</label>
+            <comment>Comma-separated attributes with index (not label) value.</comment>
+        </field>
+        <field id="variant_only_attributes" translate="label" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1">
+            <label>Variant-only Attributes</label>
+            <comment>Comma-separated attributes that will be removed UNLESS in a variant.</comment>
+        </field>
+        <field id="skip_attributes" translate="label" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="1">
+            <label>Skip Attributes</label>
+            <comment>Comma-separated attributes to never include.</comment>
         </field>
     </group>
 </include>

@@ -3,8 +3,10 @@
     <acl>
         <resources>
             <resource id="Magento_Backend::admin">
-                <resource id="Bloomreach_Feed::bloomreach_feed" title="Submit Products"/>
-                <resource id="Bloomreach_Feed::bloomreach_feed_status" title="Submit Products Status"/>
+                <resource id="Bloomreach_Feed::config_settings" title="Bloomreach Feed" translate="title" sortOrder="250">
+                    <resource id="Bloomreach_Feed::submit_products" title="Submit Products" translate="title"/>
+                    <resource id="Bloomreach_Feed::submit_status" title="Submit Products Status" translate="title"/>
+                </resource>
             </resource>
         </resources>
     </acl>

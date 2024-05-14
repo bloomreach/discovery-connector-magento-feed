@@ -14,22 +14,22 @@ Bloomreach service.
 
 - YOU SHOULD fork this project and modify it as needed for your specific use
   case. The most interesting class for you to modify / override would be
-  `ProductToBRTransformer` where you can adjust your product conversions. You
-  can look at `SubmitProductsApiController` to see the API endpoint and make
+  `BrProductTransformer` and `AttributeProcessor` where you can adjust your product conversions. 
+  You can look at `SubmitProductsApiController` to see the API endpoint and make
   adjustments to the batch processing this module uses.
 
 Items of interest:
 
-Note that this module does it's best to assume you have a MASSIVE product
-catalog and does it's best to batch process and write to the local disk of the
-server to offload eating up all of the server's RAM. Writing to the disk can
+Note that this module does its best to assume you have a MASSIVE product
+catalog and does its best to batch process and write to the local disk of the
+server to offload eating up all the server's RAM. Writing to the disk can
 pose their own set of issues as well depending on your cloud service you are
 using, so this is an area you may need to customize as well to make the module
-run smoothely for your environment.
+run smoothly for your environment.
 
 Currently, this module does NOT delete the file generated to be fed to
-Bloomreach, located in the `var` directory of the project. This is for debugging
-and this behavior should be customized, again, as your project needs.
+Bloomreach, located in the `var/export/bloomreach_feed` directory of the project. 
+This is for debugging and this behavior should be customized, again, as your project needs.
 
 ## Base requirements for your project
 
@@ -41,7 +41,7 @@ bin/magento queue:consumers:start async.operations.all
 bin/magento cron:run --group="async_operations"
 ```
 
-You must ensure async perations ARE working properly and that operations are
+You must ensure async operations ARE working properly and that operations are
 getting dequeued and processed.
 
 ## Installing Magento for development
@@ -60,17 +60,17 @@ npm i
 npm run magento-install
 ```
 
-- You will be prompted for a user name and password:
+- You will be prompted for a username and password:
   UserName = Public Key from marketplace.magento.com
   Password = Private Key from marketplace.magento.com
 
 - You will later be asked to enter your system password.
 
-After completing all of the steps the server should be running.
+After completing all the steps the server should be running.
 
 Troubleshooting:
 
-All of the videos to understand magento set up via docker is discussed here:
+All the videos to understand magento set up via docker is discussed here:
 https://courses.m.academy/courses/set-up-magento-2-development-environment-docker/lectures/9064350
 
 - Many issues can be resolved by reinstalling
@@ -164,159 +164,37 @@ To do this you can follow these steps to trigger index.
 
 - Step 1: Login to admin, if not already logged-in
 - Step 2: Goto Store->Configuration
-- Step 3: Find "Bloomreach" Section
-- Step 4: Click on "Settings" Tab under Bloomreach Section
+- Step 3: Find "Bloomreach Feed" Section
+- Step 4: Click on "Settings" Tab under "Bloomreach Feed" Section
 - Step 5: Fill all options: You can get these setting values from your Bloomreach account.
   - Account Id
-  - Domain Key: `This may vary for your each store view, if you have multiple locale enable in Magento and you have configured multiple locale in Bloomreach as well.`
-  - Auth Key
-  - Tracking Cookie
-  - Search Endpoint: use this highlighted and replace domain name with `<your_domain_name>` `http://<your_domain_name>/catalogsearch/result/`
-  - Autosuggest Endpoint: use this highlighted and replace domain name with `<your_domain_name>` `http://<your_domain_name>/search/ajax/suggest/`
+  - Catalog Name
+  - API Key: This key is sent to you in an email when you create your Bloomreach account. This is NOT the auth key that is found in your developer profile
+  - Target Environment: Production or Staging
+  - Attribute Transformations: You can customize some of the attribute transformations here. 
+  For multivalued attributes, separate the values by a comma (`,`):
+    - Name Mappings: Attributes that should be named differently in Bloomreach than in Magento. 
+      Note: One Magento attribute can be mapped to multiple Bloomreach attributes
+    - Index-value Attributes: Attributes that should use their index value (instead of text label)
+    - Variant-only Attributes: Attributes that should ONLY appear in variants (not in main products)
+    - Skip Attributes: Attributes that should NEVER be included (neither main products nor variants)
 
-## Trigger Indexing
+## Trigger Feed Submission
 
-When you made any changes on catalog at Bloomreach, then you may need to reindex those to reflect on your site.
-To do this you can follow these steps to trigger index.
-
-- Step 1: Login to admin, if not already logged-in
-- Step 2: Goto Store->Configuration
-- Step 3: Find "Bloomreach" Section
-- Step 4: Click on "Indexing" Tab under Bloomreach Section
-- Step 5: Now click on button named "Trigger Index"
-
-## Search Module Options
-
-### Auto-Suggest
-
-**Enable customers to use fast and secure way to search products, and seamless experience.**
-To enable it, you can configure it from admin panel.
+When you are ready to submit your Magento catalog to Bloomreach, 
+you can trigger the feed submission following these steps:
 
 - Step 1: Login to admin, if not already logged-in
 - Step 2: Goto Store->Configuration
-- Step 3: Find "Bloomreach" Section
-- Step 4: Click on "Search" Tab under Bloomreach Section
-- Step 5: Here you can configure Autosuggest by setting **Yes** for **Enable Autosuggest**
-- Step 6: Now enter or cross verify your frontend quick search input selector (id/css path)
-- Step 7: Here you can select No. of Terms, products, categories to show by default in quicksearch result popup.
-- Step 8: Save configuration and Clean/Flush cache.
+- Step 3: Find "Bloomreach Feed" Section
+- Step 4: Click on "Submit Product Catalog" Tab under "Bloomreach Feed" Section
+- Step 5: Now click on button named "Submit Data to Bloomreach"
 
-### Site Search
+## Feed Submission History
 
-**Replace existing search result page with more efficient and fast search results.**
-You can follow **above steps from Auto Suggest** both Configuration groups are in same page.
+You can review the Submission History in the same "Submit Product Catalog" tab. 
 
-- Step 9: You can configure Site Search i.e site search result page with Bloomreach search page for fast and efficient search result, in this same page where you have autosuggest.
-- Step 10: Enable Site search by setting **YES** to **Enable Site Search**
-
-- Step 11: **Do not change "Css Selector" value, until you know what exactly you are going to do**
-
-- Step 12: Configure other options like: No of products to show, Show Variants, Show Layered Navigation etc.
-
-- Step 13: Save configuration and Clear/Flush Cache.
-
-## Category
-
-**Replace existing product listing page/ category view page with Bloomreach product listing page.**
-
-It works similar to site search and have same options as site search have.
-Navigate to **Category** Tab under **Bloomreach** Section
-
-- Step 1: Enable Category by setting **YES** to **Enable For Category**
-
-- Step 2: **Do not change "Css Selector" value, until you know what exactly you are going to do**
-
-- Step 3: Configure other options like: No of products to show, Show Variants, Show Layered Navigation etc.
-
-- Step 4: Save configuration and Clear/Flush Cache.
-
-## Pixel
-
-You can enable Bloomreach pixel by just setting **Yes**, under Pixel Tab.
-Pixel collect customer's behavioral data, like what they are looking into site (category, products), what they have added to cart and conversion (order placed).
-
-###Pixel mainly collect data for these events, when you:
-
-- Visit Homepage or any CMS page
-- Visit Category page
-- Visit Product Page
-- Search for anything and land into search result page
-- Add to cart any product
-- Quick view any product (not integrated by default, can be done manually. See below)
-- Placed an order and went to order success page after order completion
-
-###Data Bloomreach collect:
-
-- Page url
-- User id (logged-in customer unique id encrypted hash)
-- Product id
-- Product Sku
-- Product Name
-- Order grand total
-- Order item info (sku, qty ordered, name, unit price)
-- Event type
-
-You as Admin these data are very useful which gives your insights of your customer needs that you can use for giving more related information and products to customer, and will be used for Personalized Recommendation widget. (will be covering in next section)
-
-Also, There is already pixel integrated for **add to cart event** which you can find in template at this path: **Bloomreach/Feed/view/frontend/templates/product/**, there are 2 files
-
-- list.phtml
-- view/addtocart.phtml
-
-sample the code which is added for add to cart event, looks something like this:
-
-```Sample code for Add to cart event
-<button type="submit"
-        data-blm-add-to-cart
-        data-blm-add-to-cart-sku="<?= $block->escapeHtml($_product->getSku()) ?>"
-        data-blm-add-to-cart-prod-id="<?=  /* @noEscape */ $_product->getId() ?>"
-        data-blm-add-to-cart-prod-name="<?= $block->escapeHtml($_product->getName()) ?>"
-        title="<?= $block->escapeHtmlAttr($buttonTitle) ?>"
-        class="action primary tocart"
-        id="product-addtocart-button">
-    <span><?= $block->escapeHtml($buttonTitle) ?></span>
-</button>
-```
-
-As you may know in Magento there is no **quick view** feature by default, so it is not added. Whilst you can **add Quick View button event** if you have integrated any 3rd party quick view extension. To integrate **quick view event** you can override that 3rd party listing files or any file where quick view button is added. Then **add following attribute to that Quick view button/anchor**.
-
-```
-data-blm-quickview
-data-blm-quickview-sku="Chair123"
-data-blm-quickview-prod-id="60765"
-data-blm-quickview-prod-name="Weathered Gray Wood Jozy Dining Chairs Set of 2"
-```
-
-**Note: Replace sku, product id, and product name with respective getter of product object.**
-
-It may be look like, something similar:
-
-```
-<button type="button"
-        data-blm-quickview
-        data-blm-quickview-sku="<?= $block->escapeHtml($_product->getSku()) ?>"
-        data-blm-quickview-prod-id="<?=  /* @noEscape */ $_product->getId() ?>"
-        data-blm-quickview-prod-name="<?= $block->escapeHtml($_product->getName()) ?>"
-        title="<?= $block->escapeHtmlAttr($buttonTitle) ?>"
-        class="action quick-view">
-```
-
-###Note: You can install Bloomreach Pixel Validator in chrome to validate these events
-
-## Recommendation Widget
-
-Allow you as Admin to add widgets into any cms page or block or any part of page.
-It has various options:
-
-- Category
-- Keyword
-- Personalised
-- For specific Item etc., Which can be selected at time of inserting this widget.
-
-- Step 1: To enable widget you can Navigate to **Recommendations** Tab under **Bloomreach** Section
-- Step 2: Set **Yes** for **Enable Recommendation Widget**
-- Step 3: Save configuration and Clean/Flush Cache.
-
-- Step 4: Inset widget in any CMS Page or block and see effect on frontend.
-
-`Note: Please make sure you have already created these widget rules in Bloomreach Main Dashboard, where you will get widget id, which is required to load any widget in magento. For each widget type you will have different widget id in Bloomreach Main Dashboard.`
+- Click on the "Refresh" button to fetch the latest status.
+- Click "View details" link in the "Messages" column to view the verbose messages in a popup.
+- If there is a feed file, you can download it by clicking on the link in the "Feed File" column. 
+  The feed file is in [JSON Lines](https://jsonlines.org) format.

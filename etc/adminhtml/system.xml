@@ -15,14 +15,31 @@
 -->
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
     <system>
-        <tab id="bloomreach_feed_tab" translate="label" sortOrder="10">
+        <tab id="bloomreach_feed_tab" translate="label" sortOrder="230">
             <label>Bloomreach Feed</label>
         </tab>
-        <section id="br_feed_section" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+        <section id="bloomreach_feed_settings" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
             <label>Settings</label>
             <tab>bloomreach_feed_tab</tab>
             <resource>Bloomreach_Feed::config_settings</resource>
             <include path="Bloomreach_Feed::system/settings.xml"/>
+        </section>
+        <section id="bloomreach_feed_submit" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+            <label>Submit Product Catalog</label>
+            <tab>bloomreach_feed_tab</tab>
+            <resource>Bloomreach_Feed::submit_products</resource>
+            <group id="full_feed" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="1"  showInStore="1">
+                <label>Full Feed Submission</label>
+                <field id="submit_products" type="button" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <frontend_model>Bloomreach\Feed\Block\Adminhtml\System\Config\SubmitProductsButton</frontend_model>
+                    <frontend_class>submit-catalog-button</frontend_class>
+                    <comment>WARNING: This will trigger the submission of your entire product catalog to Bloomreach. This can be a long running process and may take a long time to complete.</comment>
+                </field>
+                <field id="history" translate="label" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Submission History</label>
+                    <frontend_model>Bloomreach\Feed\Block\Adminhtml\System\Config\SubmitProductsHistory</frontend_model>
+                </field>
+            </group>
         </section>
     </system>
 </config>

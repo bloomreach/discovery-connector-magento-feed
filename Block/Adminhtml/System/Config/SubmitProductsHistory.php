@@ -8,12 +8,12 @@ use Magento\Framework\Data\Form\Element\AbstractElement;
 use Magento\Integration\Model\Oauth\TokenFactory;
 use Magento\Backend\Model\Auth\Session as AdminSession;
 
-class SubmitProductsButton extends Field
+class SubmitProductsHistory extends Field
 {
   /**
    * @var string
    */
-  protected $_template = 'Bloomreach_Feed::system/config/submit_products_button.phtml';
+  protected $_template = 'Bloomreach_Feed::system/config/history.phtml';
 
   /** @var TokenFactory */
   private $tokenFactory;

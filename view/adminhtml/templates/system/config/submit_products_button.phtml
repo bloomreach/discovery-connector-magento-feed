@@ -1,0 +1,89 @@
+<?php
+/**
+ * Bloomreach Feed extension
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Bloomreach Proprietary License
+ * that is bundled with this package in the file LICENSE.txt.
+ *
+ * @category       Bloomreach
+ * @package        Feed
+ * @copyright      Copyright (c) 2024-current Bloomreach Inc.
+ */
+
+/** @var \Bloomreach\Feed\Block\Adminhtml\System\Config\SubmitProductsButton $block */
+/** @var \Magento\Framework\Escaper $escaper */
+/** @var \Magento\Framework\View\Helper\SecureHtmlRenderer $secureRenderer */
+?>
+<div style="display: flex; flex-direction: column; width: 100%;">
+  <button type="button" id="__br_submit_products_btn__">
+    <span>Submit Data to Bloomreach</span>
+  </button>
+</div>
+
+<?php $scriptString = <<<script
+require([
+    'jquery',
+    'Magento_Ui/js/modal/confirm',
+    'Magento_Ui/js/modal/alert',
+], function($, confirmation, alert){
+
+//<![CDATA[
+  // Get rid of the annoying jquery migration logs.
+  $.migrateMute = true;
+  $.migrateTrace = false;
+  const url = new URL('{$block->getBaseUrl()}');
+  const baseUrl = `\${url.protocol}//\${url.hostname}`;
+  
+  submitProduct = function() {
+    confirmation({
+      title: 'WARNING',
+      content: 'This will trigger the submission of your entire product catalog to Bloomreach. This can be a long running process and may take a long time to complete.',
+      actions: {
+        confirm: async function() {
+          // Begin an async operation for the polling service
+          try {
+            const response = await fetch(
+              `\${baseUrl}/rest/all/async/V1/bloomreach/feed`,
+              {
+                method: "POST",
+                headers: {
+                  Authorization: 'Bearer {$block->getToken()}',
+                },
+              }
+            );
+            
+            const data = await response.json();
+            if (data.request_items && data.request_items[0] && data.request_items[0].status !== 'accepted') {
+              alert({
+                content: 'Request for submission failed. Please try again or look for existing processes in the queue.'
+              });
+            } else if (data.message) {
+              alert({
+                content: 'Request for submission failed. Error: ' + data.message
+              });
+            }
+          } catch (e) {
+            alert({
+              content: 'Request for submission failed. Error: ' + e.message
+            });
+          }
+          
+          getStatus();
+        },
+        cancel: function(){}
+      }
+    });
+  };
+//]]>
+
+});
+script;
+?>
+<?= /* @noEscape */ $secureRenderer->renderEventListenerAsTag(
+  'onclick',
+  "submitProduct()",
+  '#__br_submit_products_btn__'
+) ?>
+<?= /* @noEscape */ $secureRenderer->renderTag('script', [], $scriptString, false) ?>
