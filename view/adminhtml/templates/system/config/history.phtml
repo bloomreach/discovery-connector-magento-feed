@@ -1,0 +1,205 @@
+<?php
+/**
+ * Bloomreach Feed extension
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Bloomreach Proprietary License
+ * that is bundled with this package in the file LICENSE.txt.
+ *
+ * @category       Bloomreach
+ * @package        Feed
+ * @copyright      Copyright (c) 2024-current Bloomreach Inc.
+ */
+
+use \Bloomreach\Feed\Controller\Adminhtml\System\Config\BrFeedDownload;
+
+/** @var \Bloomreach\Feed\Block\Adminhtml\System\Config\SubmitProductsHistory $block */
+/** @var \Magento\Framework\View\Helper\SecureHtmlRenderer $secureRenderer */
+?>
+<div id="__br_submit_products_message__"></div>
+<div id="__br_submit_products_history__">
+  <button type="button">Refresh</button>
+  <div class="container">
+    <div class="header">Start Time</div>
+    <div class="header">Status</div>
+    <div class="header">Messages</div>
+    <div class="header">Feed File</div>
+    <div class="loading">Loading...</div>
+  </div>
+</div>
+
+<?php $scriptString = <<<script
+require([
+    'jquery',
+    'Magento_Ui/js/modal/alert',
+], function($, alert){
+  // Get rid of the annoying jquery migration logs.
+  $.migrateMute = true;
+  $.migrateTrace = false;
+  const url = new URL('{$block->getBaseUrl()}');
+  const baseUrl = `\${url.protocol}//\${url.hostname}`;
+  
+  getStatus = async function() {
+    $('#__br_submit_products_history__ .container div').not('.header').hide();
+    $('#__br_submit_products_history__ .container .loading').show();
+    try {
+      const response = await fetch(
+        `\${baseUrl}/rest/V1/bloomreach/feed/status`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: 'Bearer {$block->getToken()}',
+          },
+        }
+      );
+      
+      const data = await response.json();
+      const rows = data.map((oper) => {
+        const message = oper.result_message;
+        if (typeof message === 'string') {
+          return `<div>\${oper.start_date}</div>
+            <div>\${oper.status}</div>
+            <div>\${message}</div>
+            <div>&nbsp;</div>
+          `;
+        }
+        
+        const json = (typeof message[0] === 'string') ? JSON.parse(message[0]) : message[0];
+        const wrapper = $('<div></div>');
+        wrapper.append(`<div>\${oper.start_date}</div>`)
+          .append(`<div>\${oper.status}</div>`);
+          
+        let messages = '';
+        if (typeof (json.batch.total_products) === 'number' && typeof (json.batch.failed_products) === 'number') {
+          messages += `<p>Total/Failed Products: \${json.batch.total_products}/\${json.batch.failed_products}</p>`
+        }
+        if (json.submit.success) {
+          messages += '<p>Submission success</p>';
+        } else if (json.submit.message) {
+          messages += `<p>Submission failure: \${json.submit.message}</p>`;
+        }
+        if (json.additionalError !== 'None') {
+          messages += `<p>Error message: \${json.additionalError}</p>`;
+        }
+        
+        const viewDetails = $('<a href="#">View details</a>').on('click', (e) => showDetailedMessage(e, json));
+        $('<div></div>').html(messages).append(viewDetails).appendTo(wrapper);
+          
+        let feedFile = '&nbsp;';
+        if (json.batch.file_path) {
+          const filename = json.batch.file_path.split('/').pop();
+          const url = '{$block->getUrl(BrFeedDownload::URL, ['_query' => ['filename' => '_filename_']])}'.replace('_filename_', filename);
+          feedFile = `<a href="\${url}">\${filename}</a>`;
+        }
+        $('<div></div>').append(feedFile).appendTo(wrapper);
+        
+        return wrapper.children('div');
+      });
+      $('#__br_submit_products_history__ .container').children().not('.header').remove();
+      $('#__br_submit_products_history__ .container').append(rows);
+      $('#__br_submit_products_message__').html('');
+    } catch (e) {
+      $('#__br_submit_products_message__').html('Failed to get status from server: ' + e.message);
+    }
+    $('#__br_submit_products_history__ .container div').not('.header').show();
+    $('#__br_submit_products_history__ .container .loading').hide();
+  };
+  
+  const jsonToYaml = function(json) {
+    try {
+      let obj = json;
+
+      if (typeof json === 'string') {
+        obj = JSON.parse(json);
+      }
+
+      const yamlStr = [];
+
+      const convertToYaml = (obj, indent) => {
+        if (typeof obj === 'string') {
+          obj = JSON.parse(obj);
+        }
+
+        for (const prop in obj) {
+          if (obj.hasOwnProperty(prop)) {
+            const val = obj[prop];
+            if (typeof val === 'object') {
+              yamlStr.push(`<div style="margin-left: \${indent}em">\${prop}:</div>`);
+              convertToYaml(val, indent + 1);
+            } else {
+              yamlStr.push(`<div style="margin-left: \${indent}em">\${prop}: \${val}</div>`);
+            }
+          }
+        }
+      }
+
+      convertToYaml(obj, 0);
+      return yamlStr.join('\\n');
+    } catch (e) {
+      console.error(e);
+    }
+  }
+  
+  const showDetailedMessage = function(e, message) {
+    e.preventDefault();
+    alert({
+      title: $.mage.__('Details'),
+      content: jsonToYaml(message)
+    });
+  };
+  
+  $('#__br_submit_products_history__ button').on('click', getStatus);
+  getStatus();
+  
+  // Poll the status of the async operation
+  // window.clearInterval(window.__br_poll_feed_interval__ || null);
+  // window.__br_poll_feed_interval__ = window.setInterval(getStatus, 5000);
+});
+script;
+
+$cssString = <<<CSS
+#__br_submit_products_message__ {
+    color: red;
+    white-space: pre;
+    max-width: 300px;
+}
+
+#__br_submit_products_history__ {
+    width: 175%;
+    margin-top: 3rem;
+    position: relative;
+    left: -50%;
+}
+
+#__br_submit_products_history__ .container {
+    display: grid;
+    width: 100%;
+    margin-top: 1rem;
+    grid-template-columns: 1fr 1fr 4fr 2fr;
+    border-top: 1px solid;
+    border-left: 1px solid;
+    overflow-wrap: anywhere;
+}
+
+#__br_submit_products_history__ .container div {
+    border-right: 1px solid;
+    border-bottom: 1px solid;
+    padding: 1rem;
+}
+
+#__br_submit_products_history__ .header {
+    font-weight: bold;
+}
+
+#__br_submit_products_history__ .loading {
+    grid-column: 1 / 5;
+    grid-row: 2;
+    place-self: center;
+    display: none;
+}
+CSS;
+
+?>
+<?= /* @noEscape */ $secureRenderer->renderTag('script', [], $scriptString, false) ?>
+<?= /* @noEscape */ $secureRenderer->renderTag('style', [], $cssString, false) ?>

@@ -4,17 +4,17 @@ namespace Bloomreach\Feed\Api;
 
 interface SubmitProductsInterface
 {
+    const FEED_PATH = 'bloomreach_feed/';
+
     /**
      * POST
      * Triggers a complete product feed submission to the bloomreach network.
      *
      * @api
-     * @param string $username
-     * @param string $password
      *
-     * @return string
+     * @return array
      */
-    public function execute($username, $password);
+    public function execute();
 
     /**
      * GET
@@ -22,7 +22,7 @@ interface SubmitProductsInterface
      *
      * @api
      *
-     * @return string
+     * @return array
      */
     public function getStatus();
 }

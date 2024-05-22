@@ -3,13 +3,13 @@
     <route method="POST" url="/V1/bloomreach/feed">
         <service class="Bloomreach\Feed\Api\SubmitProductsInterface" method="execute"/>
         <resources>
-            <resource ref="anonymous"/>
+            <resource ref="Bloomreach_Feed::submit_products"/>
         </resources>
     </route>
     <route method="GET" url="/V1/bloomreach/feed/status">
         <service class="Bloomreach\Feed\Api\SubmitProductsInterface" method="getStatus"/>
         <resources>
-            <resource ref="anonymous"/>
+            <resource ref="Bloomreach_Feed::submit_status"/>
         </resources>
     </route>
 </routes>

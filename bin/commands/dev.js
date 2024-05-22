@@ -67,7 +67,7 @@ async function run(options) {
   }
 
   // Run the upgrade command if the sync created the plugin for the first time.
-  if (shell.exec("bin/magento module:enable Bloomreach_Connector").code !== 0) {
+  if (shell.exec("bin/magento module:enable Bloomreach_Feed").code !== 0) {
     console.log("Ensuring Module is registered in Magento");
 
     // Upgrade server to register module
@@ -90,7 +90,7 @@ async function run(options) {
     await upgradePromise;
 
     // Enable the module for use
-    shell.exec("bin/magento module:enable Bloomreach_Connector");
+    shell.exec("bin/magento module:enable Bloomreach_Feed");
   }
 
   await wait(1000);

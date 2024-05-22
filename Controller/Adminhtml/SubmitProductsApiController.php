@@ -2,103 +2,132 @@
 
 namespace Bloomreach\Feed\Controller\Adminhtml;
 
-use Magento\Framework\App\Action\HttpPostActionInterface;
-use Magento\Backend\App\Action\Context;
-use Magento\Framework\App\ResponseInterface;
-use Magento\Framework\Controller\Result\JsonFactory;
 use Bloomreach\Feed\Api\SubmitProductsInterface;
-use Magento\Backend\Model\Auth\Session;
-use Magento\User\Model\User;
-use Psr\Log\LoggerInterface;
-use Magento\Framework\Webapi\Exception as WebApiException;
+use Bloomreach\Feed\Model\Configuration;
+use Bloomreach\Feed\Model\Transform\BrProductTransformerFactory;
 use Magento\AsynchronousOperations\Api\Data\OperationInterface;
-use Magento\Framework\Api\Filter;
-use Magento\Framework\Api\Search\FilterGroup;
-use Magento\Framework\Bulk\OperationInterface as OperationFlags;
-use Magento\Framework\Api\SortOrder;
+use Magento\AsynchronousOperations\Api\OperationRepositoryInterface;
 use Magento\Catalog\Model\ResourceModel\Product\CollectionFactory;
-use Bloomreach\Feed\Controller\Adminhtml\ProductToBRTransformer;
-use Bloomreach\Feed\Controller\Adminhtml\SubmitProductsApiInterface;
-use Magento\Framework\Controller\ResultFactory;
-use Magento\Framework\Api\SearchCriteria;
-use Magento\Framework\Filesystem\Io\File;
-use Magento\Framework\Filesystem;
+use Magento\Framework\Api\SearchCriteriaBuilder;
+use Magento\Framework\Api\SortOrder;
+use Magento\Framework\Api\SortOrderBuilder;
 use Magento\Framework\App\Filesystem\DirectoryList;
-use Magento\Framework\Exception\FileSystemException;
-use Magento\Framework\Filesystem\Directory\WriteInterface;
 use Magento\Framework\Archive\Gz;
-use Magento\Framework\App\Config\ScopeConfigInterface;
-use Magento\Store\Model\ScopeInterface;
-use Magento\Store\Model\StoreManagerInterface;
+use Magento\Framework\Bulk\OperationInterface as OperationFlags;
+use Magento\Framework\Controller\ResultFactory;
+use Magento\Framework\Exception\FileSystemException;
+use Magento\Framework\Filesystem;
+use Magento\Framework\Filesystem\Directory\WriteInterface;
+use Magento\Framework\Webapi\Exception as WebApiException;
+use Psr\Log\LoggerInterface;
 
 
-class SubmitProductsApiController implements SubmitProductsInterface, SubmitProductsApiInterface
+class SubmitProductsApiController implements SubmitProductsInterface
 {
+  /**
+   * @var LoggerInterface
+   */
   private $debugLogger;
-  private $authSession;
-  private $userModel;
-  private $aclRetriever;
-  private $policy;
-  private $operationRepository;
-  private $searchCriteriaBuilder;
-  private $sortOrderBuilder;
-  private $productCollectionFactory;
-  private $brProductTransform;
-  private $directoryList;
-  private $resultFactory;
-  private $fs;
-  private $gz;
-  private $scopeConfig;
-  private $storeManager;
 
+  /**
+   * @var \Magento\AsynchronousOperations\Api\OperationRepositoryInterface
+   */
+  private $operationRepository;
+
+  /**
+   * @var \Magento\Framework\Api\SearchCriteriaBuilder
+   */
+  private $searchCriteriaBuilder;
+
+  /**
+   * @var \Magento\Framework\Api\SortOrderBuilder
+   */
+  private $sortOrderBuilder;
+
+  /**
+   * @var CollectionFactory
+   */
+  private $productCollectionFactory;
+
+  /**
+   * @var DirectoryList
+   */
+  private $directoryList;
+
+  /**
+   * @var ResultFactory
+   */
+  private $resultFactory;
+
+  /**
+   * @var Filesystem
+   */
+  private $fs;
+
+  /**
+   * @var Gz
+   */
+  private $gz;
+
+  /**
+   * @var \Bloomreach\Feed\Model\Transform\BrProductTransformerFactory
+   */
+  private $transformerFactory;
+
+  /**
+   * @var Configuration
+   */
+  private $brFeedConfig;
+
+  const TOPIC_NAME = 'async.bloomreach.feed.api.submitproductsinterface.execute.post';
 
   /**
    * ApiController constructor.
-   * @param Context $context
-   * @param JsonFactory $jsonFactory
+   *
+   * @param LoggerInterface $debugLogger
+   * @param OperationRepositoryInterface $operationRepository
+   * @param SearchCriteriaBuilder $searchCriteriaBuilder
+   * @param SortOrderBuilder $sortOrderBuilder
+   * @param CollectionFactory $productCollectionFactory
+   * @param BrProductTransformerFactory $transformerFactory
+   * @param DirectoryList $directoryList
+   * @param Filesystem $fs
+   * @param ResultFactory $resultFactory
+   * @param Gz $gz
+   * @param Configuration $brFeedConfig
    */
   public function __construct(
     LoggerInterface $debugLogger,
-    \Magento\Authorization\Model\Acl\AclRetriever $aclRetriever,
-    \Magento\Framework\Authorization\PolicyInterface $policy,
     \Magento\AsynchronousOperations\Api\OperationRepositoryInterface $operationRepository,
     \Magento\Framework\Api\SearchCriteriaBuilder $searchCriteriaBuilder,
     \Magento\Framework\Api\SortOrderBuilder $sortOrderBuilder,
     CollectionFactory $productCollectionFactory,
-    ProductToBRTransformer $brProductTransform,
+    \Bloomreach\Feed\Model\Transform\BrProductTransformerFactory $transformerFactory,
     DirectoryList $directoryList,
     FileSystem $fs,
-    User $userModel,
-    Session $authSession,
     ResultFactory $resultFactory,
     Gz $gz,
-    ScopeConfigInterface $scopeConfig,
-    StoreManagerInterface $storeManager
+    Configuration $brFeedConfig
   ) {
     $this->debugLogger = $debugLogger;
-    $this->authSession = $authSession;
-    $this->userModel = $userModel;
-    $this->aclRetriever = $aclRetriever;
-    $this->policy = $policy;
     $this->operationRepository = $operationRepository;
     $this->searchCriteriaBuilder = $searchCriteriaBuilder;
     $this->sortOrderBuilder = $sortOrderBuilder;
     $this->productCollectionFactory = $productCollectionFactory;
-    $this->brProductTransform = $brProductTransform;
+    $this->transformerFactory = $transformerFactory;
     $this->directoryList = $directoryList;
     $this->resultFactory = $resultFactory;
     $this->fs = $fs;
     $this->gz = $gz;
-    $this->scopeConfig = $scopeConfig;
-    $this->storeManager = $storeManager;
+    $this->brFeedConfig = $brFeedConfig;
   }
 
   /**
    * When called from execute, should return this processes current running
-   * process. When called fro getStatus, should return the current running
+   * process. When called from getStatus, should return the current running
    * process if it exists.
    */
-  private function getRunningOperation()
+  private function getRunningOperations(int $limit = 1)
   {
     $sortOrder = $this->sortOrderBuilder
       ->setField('started_at') // Replace 'field_name' with the actual field name you want to sort by
@@ -107,123 +136,42 @@ class SubmitProductsApiController implements SubmitProductsInterface, SubmitProd
 
     $operations = $this->operationRepository->getList(
       $this->searchCriteriaBuilder
-        ->addFilter('topic_name', 'async.bloomreach.feed.api.submitproductsinterface.execute.post', 'eq')
+        ->addFilter('topic_name', self::TOPIC_NAME, 'eq')
         ->addFilter('status', [OperationFlags::STATUS_TYPE_OPEN], 'in')
         ->addFilter('started_at', null, 'notnull')
         ->addSortOrder($sortOrder)
-        ->setPageSize(1)
+        ->setPageSize($limit)
         ->setCurrentPage(1)
         ->create()
     )->getItems();
 
-    if (count($operations) > 0) {
-      return $operations[0];
-    }
-
-    return null;
+    return $operations;
   }
 
   /**
-   * Returns the last process that executed properly.
-   */
-  private function getLastOperation()
-  {
-    $sortOrder = $this->sortOrderBuilder
-      ->setField('started_at') // Replace 'field_name' with the actual field name you want to sort by
-      ->setDirection(SortOrder::SORT_DESC) // Use SORT_ASC for ascending or SORT_DESC for descending
-      ->create();
-
-    $operations = $this->operationRepository->getList(
-      $this->searchCriteriaBuilder
-        ->addFilter('topic_name', 'async.bloomreach.feed.api.submitproductsinterface.execute.post', 'eq')
-        ->addFilter('status', [OperationFlags::STATUS_TYPE_OPEN], 'nin')
-        ->addFilter('started_at', null, 'notnull')
-        ->addSortOrder($sortOrder)
-        ->setPageSize(1)
-        ->setCurrentPage(1)
-        ->create()
-    )->getItems();
-
-    if (count($operations) > 0) {
-      return $operations[0];
-    }
-
-    return null;
-  }
-
-  private function hasPendingQueries()
-  {
-    $operations = $this->operationRepository->getList(
-      $this->searchCriteriaBuilder
-        ->addFilter('topic_name', 'async.bloomreach.feed.api.submitproductsinterface.execute.post', 'eq')
-        ->addFilter('status', [OperationFlags::STATUS_TYPE_OPEN], 'in')
-        ->addFilter('started_at', null, 'null')
-        ->setPageSize(1)
-        ->setCurrentPage(1)
-        ->create()
-    )->getItems();
-
-    return count($operations) > 0;
-  }
-
-  /**
-   * This can only be called from the execute method. This will return whether
-   * or not there is another running operation other than itself.
-   */
-  private function getSecondRunningOperation()
-  {
-    $sortOrder = $this->sortOrderBuilder
-      ->setField('started_at') // Replace 'field_name' with the actual field name you want to sort by
-      ->setDirection(SortOrder::SORT_DESC) // Use SORT_ASC for ascending or SORT_DESC for descending
-      ->create();
-
-    $operations = $this->operationRepository->getList(
-      $this->searchCriteriaBuilder
-        ->addFilter('topic_name', 'async.bloomreach.feed.api.submitproductsinterface.execute.post', 'eq')
-        ->addFilter('status', [OperationFlags::STATUS_TYPE_OPEN], 'in')
-        ->addFilter('started_at', null, 'neq')
-        ->addSortOrder($sortOrder)
-        ->setPageSize(1)
-        ->setCurrentPage(2)
-        ->create()
-    )->getItems();
-
-    if (count($operations) > 0) {
-      return $operations[0];
-    }
-
-    return null;
-  }
-
-  /**
-   * Returning store config value
+   * Returns all bulk operations in the last 30 days
    *
-   * @param string $path
-   **/
-  private function getStoreConfigValue($path)
+   * @return OperationInterface[]
+   */
+  private function getOperations()
   {
-    // Check all potential scope ranges the values can be set
-    $scope = ScopeInterface::SCOPE_STORES;
-    $scopeId = $this->storeManager->getStore()->getId();
+    $startDate = date_create();
+    $startDate->sub(\DateInterval::createFromDateString('30 days'));
 
-    // Check if the value is set at the store level
-    $value = $this->scopeConfig->getValue($path, $scope, $scopeId);
+    $sortOrder = $this->sortOrderBuilder
+      ->setField('started_at') // Replace 'field_name' with the actual field name you want to sort by
+      ->setDirection(SortOrder::SORT_DESC) // Use SORT_ASC for ascending or SORT_DESC for descending
+      ->create();
 
-    // If the value is not set at the store level, check the website level
-    if (!$value) {
-      $scope = ScopeInterface::SCOPE_WEBSITES;
-      $scopeId = $this->storeManager->getStore()->getWebsiteId();
-      $value = $this->scopeConfig->getValue($path, $scope, $scopeId);
-    }
+    $operations = $this->operationRepository->getList(
+      $this->searchCriteriaBuilder
+        ->addFilter('topic_name', self::TOPIC_NAME, 'eq')
+        ->addFilter('started_at', $startDate->format('Y-m-d H:i:s'), 'gteq')
+        ->addSortOrder($sortOrder)
+        ->create()
+    )->getItems();
 
-    // If the value is not set at the website level, check the default level
-    if (!$value) {
-      $scope = ScopeInterface::SCOPE_STORE;
-      $scopeId = 0;
-      $value = $this->scopeConfig->getValue($path, $scope, $scopeId);
-    }
-
-    return $value;
+    return $operations;
   }
 
   /**
@@ -250,7 +198,8 @@ class SubmitProductsApiController implements SubmitProductsInterface, SubmitProd
    */
   private function submitPatchFile($filePath)
   {
-    if (!file_exists($filePath)) {
+    $exportDirectory = $this->fs->getDirectoryRead(DirectoryList::VAR_EXPORT);
+    if (!($exportDirectory->isExist($filePath) && $exportDirectory->isFile($filePath))) {
       $this->debugLogger->debug('[Bloomreach_Feed] No feed file found.');
       return [
         'success' => false,
@@ -264,19 +213,19 @@ class SubmitProductsApiController implements SubmitProductsInterface, SubmitProd
     ];
 
     try {
-      $account_id = $this->getStoreConfigValue(self::SETTINGS_ACC_ID);
-      $catalog_name = $this->getStoreConfigValue(self::SETTINGS_CATALOG_KEY);
-      $hostname = $hostnames[$this->getStoreConfigValue(self::SETTINGS_CATALOG_ENVIRONMENT)];
-      $token = $this->getStoreConfigValue(self::SETTINGS_AUTH_KEY);
+      $account_id = $this->brFeedConfig->getStoreConfigValue(Configuration::SETTINGS_ACC_ID);
+      $catalog_name = $this->brFeedConfig->getStoreConfigValue(Configuration::SETTINGS_CATALOG_KEY);
+      $hostname = $hostnames[$this->brFeedConfig->getStoreConfigValue(Configuration::SETTINGS_CATALOG_ENVIRONMENT)];
+      $token = $this->brFeedConfig->getStoreConfigValue(Configuration::SETTINGS_API_KEY);
 
       if (!$account_id || !$catalog_name || !$hostname || !$token) {
         throw new \Exception('Missing configuration values.');
       }
     } catch (\Exception $e) {
       $this->debugLogger->debug("Missing configuration values:\n" . json_encode([
-        'account_id' => $this->getStoreConfigValue(self::SETTINGS_ACC_ID),
-        'catalog_name' => $this->getStoreConfigValue(self::SETTINGS_CATALOG_KEY),
-        'hostname' => $this->getStoreConfigValue(self::SETTINGS_CATALOG_ENVIRONMENT),
+        'account_id' => $this->brFeedConfig->getStoreConfigValue(Configuration::SETTINGS_ACC_ID),
+        'catalog_name' => $this->brFeedConfig->getStoreConfigValue(Configuration::SETTINGS_CATALOG_KEY),
+        'hostname' => $this->brFeedConfig->getStoreConfigValue(Configuration::SETTINGS_CATALOG_ENVIRONMENT),
         // Output token as asterisks to prevent logging sensitive data
         'token' => str_repeat('*', strlen($token == null ? '' : $token))
       ], JSON_PRETTY_PRINT), ['Bloomreach Feed']);
@@ -288,9 +237,9 @@ class SubmitProductsApiController implements SubmitProductsInterface, SubmitProd
     }
 
     $this->debugLogger->debug("Submitting feed with configuration values:\n" . json_encode([
-      'account_id' => $this->getStoreConfigValue(self::SETTINGS_ACC_ID),
-      'catalog_name' => $this->getStoreConfigValue(self::SETTINGS_CATALOG_KEY),
-      'hostname' => $this->getStoreConfigValue(self::SETTINGS_CATALOG_ENVIRONMENT),
+      'account_id' => $this->brFeedConfig->getStoreConfigValue(Configuration::SETTINGS_ACC_ID),
+      'catalog_name' => $this->brFeedConfig->getStoreConfigValue(Configuration::SETTINGS_CATALOG_KEY),
+      'hostname' => $this->brFeedConfig->getStoreConfigValue(Configuration::SETTINGS_CATALOG_ENVIRONMENT),
       // Output token as asterisks to prevent logging sensitive data
       'token' => str_repeat('*', strlen($token == null ? '' : $token))
     ], JSON_PRETTY_PRINT), ['Bloomreach Feed']);
@@ -307,7 +256,7 @@ class SubmitProductsApiController implements SubmitProductsInterface, SubmitProd
     ];
 
     // Now submit the file gzip encoded
-    $payload = gzencode(file_get_contents($filePath));
+    $payload = gzencode($exportDirectory->readFile($filePath));
 
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PUT');
@@ -366,14 +315,20 @@ class SubmitProductsApiController implements SubmitProductsInterface, SubmitProd
    * alongside other operations without causing any issues and keep the server
    * operational to customers.
    */
-  private function batchProcessProducts($dirPath, $filePath)
+  private function batchProcessProducts($filePath)
   {
+    $startTime = date_create();
     $batchSize = 100;
     $page = 1;
     $productCollection = $this->productCollectionFactory->create();
     $productCollection->setPageSize($batchSize);
     // Get an appropriate file path to write our patch JSON objects to.
-    $varDirectory = $this->fs->getDirectoryWrite(DirectoryList::VAR_DIR);
+    $varDirectory = $this->fs->getDirectoryWrite(DirectoryList::VAR_EXPORT);
+
+    /**
+     * @var \Bloomreach\Feed\Model\Transform\BrProductTransformer $brProductTransform
+     */
+    $brProductTransform = $this->transformerFactory->create();
 
     // Initialize our file, or ensure it is empty
     $this->debugLogger->debug('Initializing feed file: ' . $filePath, ['Bloomreach Feed']);
@@ -406,7 +361,7 @@ class SubmitProductsApiController implements SubmitProductsInterface, SubmitProd
           }
 
           // Get the product convertted to a bloomreach patch operation
-          $result = $this->brProductTransform->transform($product);
+          $result = $brProductTransform->transform($product);
 
           if (!$result) {
             $this->debugLogger->debug('Product ' . $product->getSku() . ' failed the transform. Skipping.', ["Bloomreach", "Feed"]);
@@ -417,6 +372,7 @@ class SubmitProductsApiController implements SubmitProductsInterface, SubmitProd
           // ensure we don't add it again.
           $processedProducts[] = $result['id'];
           $productSku = $result['id'];
+          $totalProducts++;
 
           // Remove the id property from the result as it is not needed in the
           // patch operation.
@@ -468,15 +424,19 @@ class SubmitProductsApiController implements SubmitProductsInterface, SubmitProd
     $feedSize = $varDirectory->stat($filePath)['size'];
     $this->debugLogger->debug("Finished writing feed file.\nTotal products $totalProducts.\nFailed products $failedProducts\nFeed File Size: $feedSize", ['Bloomreach Feed']);
 
-    if (count($failureReasons) <= 0) {
+    if (empty($failureReasons)) {
       $failureReasons[] = "No failures.";
     }
+
+    $endTime = date_create();
+    $elapsedTime = $startTime->diff($endTime)->format('%h hours, %i minutes, %s seconds');
 
     return [
       'total_products' => $totalProducts,
       'failed_products' => $failedProducts,
       'failure_reasons' => array_values($failureReasons),
-      'file_path' => $filePath
+      'file_path' => $filePath,
+      'elapsed_time' => $elapsedTime
     ];
   }
 
@@ -485,27 +445,11 @@ class SubmitProductsApiController implements SubmitProductsInterface, SubmitProd
    * Triggers a complete product feed submission to the bloomreach network.
    *
    * @api
-   * @param string $username
-   * @param string $password
    *
-   * @return string
+   * @return array
    */
-  public function execute($username, $password)
+  public function execute()
   {
-    if (!$username || !$password) {
-      throw new WebApiException(__('Please provide a username and password.'));
-    }
-
-    $user = $this->userModel->login($username, $password);
-
-    if (!$user) {
-      throw new WebApiException(__('Invalid login credentials.'));
-    }
-
-    if (!$this->policy->isAllowed($user->getRole()->getId(), 'Magento_Backend::admin')) {
-      throw new WebApiException(__('You do not have permission to submit products.'));
-    }
-
     // TODO: Note, this does not fully solve the "only one process" issue fully.
     // We should be using a database lock pattern to guarantee this. However,
     // this is a simple resource so we don't need such robustness for the time
@@ -516,11 +460,12 @@ class SubmitProductsApiController implements SubmitProductsInterface, SubmitProd
     // When this operation runs, it has created an async operation for itself.
     // So if there is more than one operation in play + itself we know a
     // secondary operation is an existing operation running already.
-    $thisOperation = $this->getRunningOperation();
-    $runningOperation = $this->getSecondRunningOperation();
+    $operations = $this->getRunningOperations(2);
+    $thisOperation = current($operations);
+    $runningOperation = next($operations);
 
-    if ($runningOperation && $thisOperation->getId() !== $runningOperation->getId()) {
-      $runningId = $runningOperation->getId();
+    if ($thisOperation && $runningOperation && $thisOperation->getData('id') !== $runningOperation->getData('id')) {
+      $runningId = $runningOperation->getData('id');
       throw new WebApiException(__("Products are already being processed. Operation ID -> $runningId"));
     }
 
@@ -530,9 +475,9 @@ class SubmitProductsApiController implements SubmitProductsInterface, SubmitProd
     $submitInfo = [];
 
     try {
-      $dirPath = $this->directoryList->getPath('var');
-      $filePath = $dirPath . '/feed.json';
-      $batchInfo = $this->batchProcessProducts($dirPath, $filePath);
+      $timestamp = date('Ymd_His');
+      $filePath = self::FEED_PATH . '/feed_' . $timestamp . '.jsonl';
+      $batchInfo = $this->batchProcessProducts($filePath);
       $this->debugLogger->debug('Should submit the file now to BR.', ['Bloomreach Feed']);
       $submitInfo = $this->submitPatchFile($filePath);
     } catch (\Exception $e) {
@@ -549,7 +494,7 @@ class SubmitProductsApiController implements SubmitProductsInterface, SubmitProd
       'additionalError' => $additionalError == '' ? "None" : $additionalError,
     ];
 
-    return json_encode($response);
+    return [$response];
   }
 
   /**
@@ -558,46 +503,43 @@ class SubmitProductsApiController implements SubmitProductsInterface, SubmitProd
    *
    * @api
    *
-   * @return string
+   * @return array
    */
   public function getStatus()
   {
-    $operation = $this->getRunningOperation();
-    $pending = $this->hasPendingQueries();
+    $operations = $this->getOperations();
 
-    // Send the current operation status queued up
-    if ($operation) {
-      $statusMessage = [
-        OperationInterface::STATUS_TYPE_OPEN => 'Open',
-        OperationInterface::STATUS_TYPE_RETRIABLY_FAILED => 'Retriably Failed',
-        OperationInterface::STATUS_TYPE_NOT_RETRIABLY_FAILED => 'Not Retriably Failed',
-        OperationInterface::STATUS_TYPE_COMPLETE => 'Complete',
-      ];
+    $statusMessage = [
+      OperationInterface::STATUS_TYPE_OPEN => 'Open',
+      OperationInterface::STATUS_TYPE_RETRIABLY_FAILED => 'Retriably Failed',
+      OperationInterface::STATUS_TYPE_NOT_RETRIABLY_FAILED => 'Not Retriably Failed',
+      OperationInterface::STATUS_TYPE_COMPLETE => 'Complete',
+    ];
 
-      return json_encode([
+    $result = [];
+    foreach ($operations as $operation) {
+      $resultMessage = $operation->getResultSerializedData();
+      if (empty($resultMessage)) {
+        if ($operation->getStatus() == OperationInterface::STATUS_TYPE_OPEN) {
+          $resultMessage = "Products are being processed.";
+        } else {
+          $resultMessage = $operation->getResultMessage();
+        }
+      } else {
+        try {
+          $resultMessage = json_decode($resultMessage, true);
+        } catch (JsonException $e) {
+          $this->debugLogger->warning("Error decoding operation result data: " . $e->getMessage(), $e->getTrace());
+          $resultMessage = "Failed to obtain status";
+        }
+      }
+      $result[] = [
+        'start_date' => $operation->getData('started_at'),
         'status' => $statusMessage[$operation->getStatus()],
-        'result_message' => "Products are being processed.",
-        'pending' => $pending,
-      ]);
+        'result_message' => $resultMessage,
+      ];
     }
 
-    $lastOperation = $this->getLastOperation();
-
-    if ($lastOperation) {
-      $result = $lastOperation->getResultSerializedData();
-
-      return json_encode([
-        'status' => 'complete',
-        'result_message' => $result,
-        'pending' => $pending,
-      ]);
-    }
-
-    // If no operation present, we are ready for a new process to be queued up.
-    return json_encode([
-      'status' => 'ready',
-      'result_message' => "Products not yet processed.",
-      'pending' => $pending,
-    ]);
+    return $result;
   }
 }

@@ -2,9 +2,9 @@
 
 namespace Bloomreach\Feed\Model\Config\Source;
 
-use Magento\Framework\Option\ArrayInterface;
+use Magento\Framework\Data\OptionSourceInterface;
 
-class EndPoint implements ArrayInterface
+class EndPoint implements OptionSourceInterface
 {
 
     /**

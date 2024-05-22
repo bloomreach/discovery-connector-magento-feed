@@ -1,3 +1,15 @@
+## 1.1.0
+
+## Changed
+
+- [`ADDED`]: Attributes configuration section
+- [`ADDED`]: Feed import history and the ability to download previous feeds
+- [`CHANGED`]: Project structure for better organization
+
+## Fixed
+
+- [`FIXED`]: Additional adjustments and bug fixes to products/attributes transformation
+
 ## 1.0.0
 
 ## Breaking

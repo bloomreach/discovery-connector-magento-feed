@@ -15,10 +15,29 @@
 -->
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Store:etc/config.xsd">
     <default>
-        <bloomreach_settings>
+        <bloomreach_feed_settings>
             <api_url>
                 <catalog_environment>prod</catalog_environment>
             </api_url>
-        </bloomreach_settings>
+            <attribute_configs>
+                <!--
+                    Some name mappings for attribute names
+                    Use a comma-separated list to map the same property to multiple attributes
+                -->
+                <name_mappings>{"thumbnail":"thumb_image,swatch_image"}</name_mappings>
+                <!--
+                    Attributes with index (not label) value.
+                -->
+                <index_value_attributes>status</index_value_attributes>
+                <!--
+                    Attributes that will be removed UNLESS it is a variant
+                -->
+                <variant_only_attributes>price,sale_price,thumb_image,swatch_image</variant_only_attributes>
+                <!--
+                    Attributes to never include
+                -->
+                <skip_attributes>media_gallery,special_price,name</skip_attributes>
+            </attribute_configs>
+        </bloomreach_feed_settings>
     </default>
 </config>
