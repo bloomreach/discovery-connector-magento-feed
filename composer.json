@@ -1,7 +1,7 @@
 {
   "name": "bloomreach/bloomreach-feed-magento",
   "description": "Bloomreach connector for submitting magento data to Bloomreach.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "magento2-module",
   "license": "proprietary",
   "authors": [
